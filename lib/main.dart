@@ -1,14 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:minimal_launcher/Models/installed_app_model.dart';
 import 'package:minimal_launcher/main_screen.dart';
 import 'package:minimal_launcher/provider/list_of_apps_provider.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
-
-void main() {
+import 'package:hive/hive.dart';
+const String BOXNAME = 'BOXNAME';
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  final document = await getApplicationDocumentsDirectory();
+  Hive.init(document.path);
+  Hive.registerAdapter(InstalledAppModelAdapter());
+  await Hive.openBox<InstalledAppModel>(BOXNAME);
   runApp(
     MyApp(),
   );
 }
-
 class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -19,10 +26,7 @@ class MyApp extends StatelessWidget {
         primarySwatch: Colors.blue,
         visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
-      home: ChangeNotifierProvider(
-        create: (context) => InstalledAppsProvider(),
-        child: MainScreen(),
-      ),
+      home: MainScreen(),
     );
   }
 }

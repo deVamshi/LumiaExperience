@@ -1,31 +1,50 @@
 import 'package:device_apps/device_apps.dart';
+import 'package:fading_edge_scrollview/fading_edge_scrollview.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:line_awesome_flutter/line_awesome_flutter.dart';
-import 'package:minimal_launcher/Models/app_model.dart';
+import 'package:minimal_launcher/Models/installed_app_model.dart';
 import 'package:minimal_launcher/provider/list_of_apps_provider.dart';
+import 'package:minimal_launcher/settings.dart';
 import 'package:minimal_launcher/widgets.dart';
 import 'package:provider/provider.dart';
+import 'package:page_transition/page_transition.dart';
 
-secondScreen() {
+class SecondScreen extends StatefulWidget {
+  @override
+  _SecondScreenState createState() => _SecondScreenState();
+}
+
+class _SecondScreenState extends State<SecondScreen> {
   TextEditingController textEditingController = TextEditingController();
-  searchForApps(String text, List<AppModel> localApps) async {
-    List<AppModel> searchResult = localApps
-        .where((AppModel item) =>
+  InstalledAppsProvider provider;
+  ScrollController scrollController = ScrollController();
+
+  searchForApps(String text, List<InstalledAppModel> localApps) async {
+    List<InstalledAppModel> searchResult = localApps
+        .where((InstalledAppModel item) =>
             item.appName.toLowerCase().contains(text.toLowerCase()))
         .toList();
-    // for (AppModel app in searchResult) {
-    //   print(app.appName);
-    // }
 
     return searchResult;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    initialiseProvider();
+  }
+
+  initialiseProvider() async {
+    provider = InstalledAppsProvider();
+    provider.update();
   }
 
   mySearchBar() {
     return Container(
       margin: EdgeInsets.symmetric(horizontal: 10),
       padding: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      height: 48,
+      height: 50,
       decoration: BoxDecoration(
           color: Colors.grey[850], borderRadius: BorderRadius.circular(5)),
       child: Row(
@@ -39,13 +58,13 @@ secondScreen() {
           ),
           Expanded(child:
               Consumer<InstalledAppsProvider>(builder: (bc, data, chidl) {
-            List<AppModel> installedAppsInTextField =
+            List<InstalledAppModel> installedAppsInTextField =
                 data.getProviderInstalledApps;
             return TextField(
               onChanged: (value) async {
                 // print(value);
                 if (value != "") {
-                  List<AppModel> searches =
+                  List<InstalledAppModel> searches =
                       await searchForApps(value, installedAppsInTextField);
                   data.setSearchedApps(searches);
                 } else {
@@ -56,8 +75,9 @@ secondScreen() {
               style: GoogleFonts.lato(color: Colors.white),
               decoration: InputDecoration(
                 border: InputBorder.none,
-                hintText:
-                    data.isEmpty ? "Loading Apps..." : "Search for your apps",
+                hintText: data.getIsEmpty
+                    ? "Loading Apps..."
+                    : "Search for your apps",
                 hintStyle: GoogleFonts.lato(color: Colors.grey),
               ),
             );
@@ -67,17 +87,21 @@ secondScreen() {
     );
   }
 
-  // secondaryTile(AppModel app) {
+  // Widget secondaryTile(InstalledAppModel app) {
   //   return ListTile(
-  //     onTap: () {
-  //       if (textEditingController.value != null) {
-  //         textEditingController.clear();
-  //         // InstalledAppsProvider provider = Provider.of<InstalledAppsProvider>(context);
-
-  //       }
-  //       DeviceApps.openApp(app.packageName);
+  //     onTap: () async {
+  //       await DeviceApps.openApp(app.packageName);
+  //       // Future.delayed(Duration(milliseconds: 1000), () {
+  //       //   if (textEditingController.value != null) {
+  //       //     textEditingController.clear();
+  //       //     data.setSearchedApps(data.getProviderInstalledApps);
+  //       //   }
+  //       // });
+  //       Future.delayed(Duration(milliseconds: 1000), () {
+  //         Navigator.pop(context);
+  //       });
   //     },
-  //     leading: fragmentMemoryImageWidget(app.appIcon),
+  //     leading: fragmentMemoryImageWidget(app.appIcon,),
   //     title: Text(
   //       "${app.appName}",
   //       style: GoogleFonts.lato(color: Colors.white, fontSize: 20),
@@ -86,21 +110,29 @@ secondScreen() {
   // }
 
   buildListOfApps() {
-    return Scrollbar(
-      child: Consumer<InstalledAppsProvider>(
-        builder: (bc, data, child) {
-          List<AppModel> appsInListView =
-              (data.getAppsToShow == null) || textEditingController.text == ""
-                  ? data.getProviderInstalledApps
-                  : data.getAppsToShow;
-          return GestureDetector(
-            onPanDown: (dragDetail) {
-              FocusScopeNode currentFocus = FocusScope.of(bc);
-              if (!currentFocus.hasPrimaryFocus) {
-                currentFocus.unfocus();
-              }
-            },
+    return Consumer<InstalledAppsProvider>(
+      builder: (bc, data, child) {
+        // print('consumer ran');
+        List<InstalledAppModel> appsInListView =
+            (data.getAppsToShow == null) || textEditingController.text == ""
+                ? data.getProviderInstalledApps
+                : data.getAppsToShow;
+        return GestureDetector(
+          onHorizontalDragUpdate: (dragDetail) {
+            if (dragDetail.delta.dx > 0) {
+              Navigator.pop(context, PageTransitionType.rightToLeft);
+            }
+          },
+          onPanDown: (dragDetail) {
+            FocusScopeNode currentFocus = FocusScope.of(bc);
+            if (!currentFocus.hasPrimaryFocus) {
+              currentFocus.unfocus();
+            }
+          },
+          child: FadingEdgeScrollView.fromScrollView(
+            shouldDisposeScrollController: true,
             child: ListView.builder(
+                controller: scrollController,
                 physics: BouncingScrollPhysics(),
                 itemCount: appsInListView?.length ?? 0,
                 itemBuilder: (BuildContext bc, int index) {
@@ -110,15 +142,18 @@ secondScreen() {
                   //       localApps[index - 1].appName[0].toLowerCase())
                   // : null;
                   return ListTile(
-                    onTap: () {
-                      if (textEditingController.value != null) {
-                        textEditingController.clear();
-                        data.setSearchedApps(data.getProviderInstalledApps);
-                      }
-                      DeviceApps.openApp(appsInListView[index].packageName);
+                    onTap: () async {
+                      await DeviceApps.openApp(
+                          appsInListView[index].packageName);
+                      Future.delayed(Duration(milliseconds: 1000), () {
+                        if (textEditingController.value != null) {
+                          textEditingController.clear();
+                          data.setSearchedApps(data.getProviderInstalledApps);
+                        }
+                      });
                     },
                     leading: fragmentMemoryImageWidget(
-                        appsInListView[index].appIcon),
+                        appsInListView[index].appIcon, 40),
                     title: Text(
                       "${appsInListView[index].appName}",
                       style:
@@ -126,45 +161,93 @@ secondScreen() {
                     ),
                   );
                 }),
-          );
-        },
-      ),
+          ),
+        );
+      },
     );
     // : showCircularProgressIndicator();
   }
 
-  return Column(
-    children: [
-      SizedBox(
-        height: 10,
-      ),
-      mySearchBar(),
-      Expanded(
-        child: SizedBox(
-          child: Row(
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      resizeToAvoidBottomInset: true,
+      backgroundColor: Colors.black,
+      body: SafeArea(
+        child: ChangeNotifierProvider<InstalledAppsProvider>(
+          create: (context) => provider,
+          child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               SizedBox(
-                width: 45,
-                child: IconButton(
-                    iconSize: 28,
-                    onPressed: () {},
-                    icon: Icon(
-                      LineAwesomeIcons.cog,
-                      color: Colors.white,
-                    )),
+                height: 70,
+                child: Padding(
+                  padding: const EdgeInsets.only(left: 30),
+                  child: Text(
+                    "apps",
+                    style: GoogleFonts.lato(
+                        color: Colors.white,
+                        fontSize: 60,
+                        fontWeight: FontWeight.w300),
+                  ),
+                ),
+              ),
+              SizedBox(
+                height: 10,
               ),
               Expanded(
                 child: SizedBox(
-                  child: buildListOfApps(),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    // crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      SizedBox(
+                        width: 40,
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            IconButton(
+                                iconSize: 28,
+                                onPressed: () {
+                                  Navigator.push(
+                                    context,
+                                    PageTransition(
+                                      type: PageTransitionType.rightToLeft,
+                                      child: Settings(),
+                                    ),
+                                  );
+                                },
+                                icon: Icon(
+                                  LineAwesomeIcons.cog,
+                                  color: Colors.white,
+                                  size: 25,
+                                )),
+                            SizedBox(
+                              height: 10,
+                            )
+                          ],
+                        ),
+                      ),
+                      Expanded(
+                        child: SizedBox(
+                          child: Scrollbar(child: buildListOfApps()),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
+              mySearchBar(),
+              // mySearchBar(),
+              SizedBox(
+                height: 10,
+              )
             ],
           ),
         ),
       ),
-    ],
-  );
+    );
+  }
 }
 
 // buildSearchBar(BuildContext context) {

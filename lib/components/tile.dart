@@ -1,10 +1,17 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:device_apps/device_apps.dart';
+import 'package:minimal_launcher/widgets.dart';
 
-Widget tile(IconData icon, String appName, String packageName, Color color) {
+Widget tile(
+    Uint8List uint8list, String appName, String packageName, Color color, double size) {
   return Container(
-    padding: EdgeInsets.symmetric(horizontal: 2, vertical: 2),
+    // width: 100,
+    // height: 50,
+    // color: Colors.red,
+    padding: EdgeInsets.all(3),
     // margin: EdgeInsets.symmetric(horizontal: 5,),
     child: GestureDetector(
       onTap: () {
@@ -16,23 +23,21 @@ Widget tile(IconData icon, String appName, String packageName, Color color) {
         child: Stack(
           children: [
             Center(
-                child: Icon(
-              icon,
-              color: Colors.white,
-              size: 45,
-            )
-                //      Image(
-                //   image: image,
-                //   width: 70,
-                //   height: 70,
-                // ),
+                child:
+                //  CircleAvatar(
+            //       radius: size,
+            //   backgroundImage: MemoryImage(uint8list),
+            //   backgroundColor: Colors.blue,
+            // )
+                //  Icon(uint8list,color: Colors.white,size: 40,)
+                fragmentMemoryImageWidget(uint8list, size),
                 ),
             Positioned(
               bottom: 5,
               left: 5,
               child: Text(
                 "$appName",
-                overflow: TextOverflow.ellipsis,
+                overflow: TextOverflow.fade,
                 style: GoogleFonts.lato(
                     color: Colors.white,
                     fontSize: 10,
