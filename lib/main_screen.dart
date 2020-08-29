@@ -2,14 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:line_awesome_flutter/line_awesome_flutter.dart';
 
 import 'package:minimal_launcher/provider/list_of_apps_provider.dart';
-import 'package:minimal_launcher/second_screen_components.dart';
+import 'package:minimal_launcher/second_screen.dart';
 import 'package:preload_page_view/preload_page_view.dart';
 import 'package:provider/provider.dart';
 import 'Models/installed_app_model.dart';
-import 'second_screen_components.dart';
+import 'second_screen.dart';
 // import 'package:minimal_launcher/values.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
-import 'second_screen_components.dart';
+import 'second_screen.dart';
 import 'package:page_transition/page_transition.dart';
 import 'widgets.dart';
 import 'components/tile.dart';
