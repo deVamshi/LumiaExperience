@@ -1,0 +1,54 @@
+import 'package:flutter/material.dart';
+
+class Values {
+  static List<List<Color>> themes = [
+    [
+      Colors.lightBlue,
+      Colors.lightBlue[200],
+      Colors.lightBlue[300],
+      Colors.lightBlue[400],
+    ],
+    [
+      Colors.green,
+      Colors.green[200],
+      Colors.green[300],
+      Colors.green[400],
+    ],
+    [
+      Colors.teal,
+      Colors.teal[200],
+      Colors.teal[300],
+      Colors.teal[400],
+    ],
+    [
+      Colors.amber,
+      Colors.amber[200],
+      Colors.amber[300],
+      Colors.amber[400],
+    ],
+    [
+      Colors.pink,
+      Colors.pink[200],
+      Colors.pink[300],
+      Colors.pink[400],
+    ],
+    [
+      Colors.red,
+      Colors.red[200],
+      Colors.red[300],
+      Colors.red[400],
+    ],
+    [
+      Colors.blue,
+      Colors.blue[200],
+      Colors.blue[300],
+      Colors.blue[400],
+    ],
+    [
+      Colors.indigo,
+      Colors.indigo[200],
+      Colors.indigo[300],
+      Colors.indigo[400],
+    ],
+  ];
+}

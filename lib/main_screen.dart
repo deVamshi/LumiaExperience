@@ -1,168 +1,220 @@
+import 'dart:math';
+import 'package:device_apps/device_apps.dart';
 import 'package:flutter/material.dart';
-import 'package:line_awesome_flutter/line_awesome_flutter.dart';
-
+import 'package:google_fonts/google_fonts.dart';
+import 'package:minimal_launcher/Models/favorite_apps_provider.dart';
 import 'package:minimal_launcher/provider/list_of_apps_provider.dart';
-import 'package:minimal_launcher/second_screen.dart';
-import 'package:preload_page_view/preload_page_view.dart';
+import 'package:minimal_launcher/provider/theme_provider.dart';
+import 'package:minimal_launcher/provider/values.dart';
 import 'package:provider/provider.dart';
 import 'Models/installed_app_model.dart';
-import 'second_screen.dart';
-// import 'package:minimal_launcher/values.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
-import 'second_screen.dart';
-import 'package:page_transition/page_transition.dart';
 import 'widgets.dart';
-import 'components/tile.dart';
 
 class MainScreen extends StatefulWidget {
   @override
   _MainScreenState createState() => _MainScreenState();
 }
 
+Random rnd = Random();
+
 class _MainScreenState extends State<MainScreen> {
-  // List<AppModel> installedApps;
-  final PageController controller = PageController(initialPage: 0);
-  InstalledAppsProvider _providerInMainScreen =  InstalledAppsProvider();
-  int currentScreen = 0;
-
-  // List<Widget> screens = [buildMainApps(), secondScreen()];
-
+  InstalledAppsProvider _installedAppsProvider;
   @override
   void initState() {
     super.initState();
-    
-    _providerInMainScreen.update();
+    importantMethod();
   }
 
-  // secondScreen() {
-  //   return Column(
-  //     children: [
-  //       SizedBox(
-  //         height: 200,
-  //         child: buildSearchBar(context),
-  //       ),
-  //       Expanded(
-  //         child: SizedBox(
-  //           child: Row(
-  //             children: [
-  //               SizedBox(
-  //                 width: 50,
-  //               ),
-  //               Expanded(
-  //                 child: SizedBox(
-  //                   child: buildListOfApps(),
-  //                 ),
-  //               ),
-  //             ],
-  //           ),
-  //         ),
-  //       )
-  //     ],
-  //   );
-  // }
+  importantMethod() async {
+    _installedAppsProvider =
+        Provider.of<InstalledAppsProvider>(context, listen: false);
+    await Provider.of<FavoriteAppsProvider>(context, listen: false)
+        .getFavoriteAppsFromBox();
+    await Provider.of<InstalledAppsProvider>(context, listen: false).update();
+    // appsToSend = _providerInMainScreen.getProviderInstalledApps;
+  }
 
-  // buildListOfApps() {
-  //   return GestureDetector(
-  //     onPanDown: (dragDetail) {
-  //       FocusScopeNode currentFocus = FocusScope.of(context);
-  //       if (!currentFocus.hasPrimaryFocus) {
-  //         currentFocus.unfocus();
-  //       }
-  //     },
-  //     child: Scrollbar(
-  //       child: Consumer<InstalledAppsProvider>(
-  //         builder: (bc, data, child) {
-  //           List<AppModel> appsInListView = data.getProviderInstalledApps;
-
-  //           return ListView.builder(
-  //               physics: BouncingScrollPhysics(),
-  //               // padding: listViewPadding,
-  //               itemCount: appsInListView?.length ?? 0,
-  //               itemBuilder: (BuildContext bc, int index) {
-  //                 // Application app = localApps[index];
-  //                 // index != 0 ?
-  //                 //   need = (localApps[index].appName[0].toLowerCase() !=
-  //                 //       localApps[index - 1].appName[0].toLowerCase())
-  //                 // : null;
-  //                 return secondaryTile(appsInListView[index]);
-  //                 // need
-  //                 //     ? primaryTile(localApps[index]) :
-  //                 // secondaryTile(apps[index]);
-  //               });
-  //         },
-  //       ),
-  //     ),
-  //   );
-  //   // : showCircularProgressIndicator();
-  // }
+  Widget tile(InstalledAppModel appModel, int index, bool isBeingEdited) {
+    int number = rnd.nextInt(4);
+    return Consumer<ThemeProvider>(
+      builder: (bc, data, child) {
+        return Card(
+          color: Values.themes[data.themeIndex][number],
+          child: InkWell(
+            onLongPress: () {
+              // Provider..setIsBeingEdited();
+              Provider.of<FavoriteAppsProvider>(context, listen: false)
+                  .setIsBeingEdited();
+            },
+            splashColor: Colors.white,
+            onTap: () {
+              if (isBeingEdited) {
+                Provider.of<FavoriteAppsProvider>(context, listen: false)
+                    .setIsBeingEdited();
+                return;
+              }
+              DeviceApps.openApp(appModel.packageName);
+            },
+            child: Padding(
+              padding: EdgeInsets.symmetric(horizontal: 5),
+              child: Stack(
+                children: [
+                  Center(
+                    child: fragmentMemoryImageWidget(
+                        appModel.appIcon, index.isEven ? 45 : 35),
+                  ),
+                  Positioned(
+                    bottom: 5,
+                    left: 5,
+                    child: Text(
+                      appModel.appName,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.lato(
+                          color: Colors.black,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 1),
+                    ),
+                  ),
+                  isBeingEdited
+                      ? Positioned(
+                          top: 5,
+                          right: 0,
+                          child: Center(
+                            child: GestureDetector(
+                              onTap: () {
+                                Provider.of<FavoriteAppsProvider>(context,
+                                        listen: false)
+                                    .removeFavoriteApp(index);
+                              },
+                              child: Icon(
+                                Icons.cancel,
+                                color: Colors.white,
+                                size: 20,
+                              ),
+                            ),
+                          ),
+                        )
+                      : Text("")
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
+    print("mainscreen");
     return Scaffold(
-      // resizeToAvoidBottomPadding: false,
       backgroundColor: Colors.black,
       body: WillPopScope(
         onWillPop: () => Future(() => false),
-        child: GestureDetector(
-          onHorizontalDragUpdate: (dragDetails) {
-            if (dragDetails.delta.dx < 0) {
-              Navigator.push(
-                context,
-                PageTransition(
-                  type: PageTransitionType.rightToLeft,
-                  child: SecondScreen(),
-                ),
-              );
-            }
-          },
-          child: SafeArea(
-              child: Column(
-            children: [
-              Expanded(
-                child: ChangeNotifierProvider<InstalledAppsProvider>(
-                  create: (context) => _providerInMainScreen,
-                                  child: Container(
-                    // height: 100,
-                    child: Consumer<InstalledAppsProvider>(
-                      builder: (bc, data, _) {
+        child: SafeArea(
+          child: GestureDetector(
+            onTap: () {
+              if (Provider.of<FavoriteAppsProvider>(context, listen: false)
+                  .isBeingEdited) {
+                Provider.of<FavoriteAppsProvider>(context, listen: false)
+                    .setIsBeingEdited();
+              }
+            },
+            onHorizontalDragUpdate: (dragDetails) async {
+              if (dragDetails.delta.dx < 0) {
+                Navigator.pushNamed(context, "/second");
+              }
+            },
+            child: Column(
+              children: [
+                Expanded(
+                  child: Container(
+                    child: Consumer<FavoriteAppsProvider>(
+                      builder: (bc, data, child) {
                         List<InstalledAppModel> appsInStaggeredGridView =
-                            (data.getAppsToShow == null)
-                                ? data.getProviderInstalledApps?.sublist(0, 30)
-                                : data.getAppsToShow?.sublist(0, 30);
-                        return StaggeredGridView.countBuilder(
-                          padding: EdgeInsets.symmetric(horizontal: 5),
-                          physics: AlwaysScrollableScrollPhysics(
-                              parent: BouncingScrollPhysics()),
-                          crossAxisCount: 4,
-                          itemCount: appsInStaggeredGridView?.length ?? 0,
-                          itemBuilder: (BuildContext context, int index) {
-                            InstalledAppModel appModel =
-                                appsInStaggeredGridView[index];
-                            return tile(
-                                appModel.appIcon,
-                                appModel.appName,
-                                appModel.packageName,
-                                Colors.grey[850],
+                            data.favoriteAppsList;
 
-                              //  index.isEven ? Colors.blue[400] : Colors.blue,
-                                index.isEven ? 45 : 35);
-                          },
-                          staggeredTileBuilder: (int index) =>
-                              //  StaggeredTile.extent(2, index.isEven ? 1 : 2),
-                              new StaggeredTile.count(index.isEven ? 2 : 1, 1.2),
-                          mainAxisSpacing: 0.0,
-                          crossAxisSpacing: 0.0,
-                        );
+                        bool isBeingEdited = data.isBeingEdited;
+                        return appsInStaggeredGridView.isNotEmpty
+                            ? StaggeredGridView.countBuilder(
+                                padding: EdgeInsets.symmetric(horizontal: 5),
+                                crossAxisCount: 4,
+                                itemCount: appsInStaggeredGridView?.length ?? 0,
+                                itemBuilder: (BuildContext context, int index) {
+                                  InstalledAppModel appModel =
+                                      appsInStaggeredGridView[index];
+                                  return tile(appModel, index, isBeingEdited);
+                                },
+                                staggeredTileBuilder: (int index) =>
+                                    new StaggeredTile.count(
+                                        index.isEven ? 2 : 1, 1.2),
+                                mainAxisSpacing: isBeingEdited ? 10 : 0.0,
+                                crossAxisSpacing: isBeingEdited ? 10 : 0.0,
+                              )
+                            : child;
                       },
+                      child: Column(
+                        mainAxisSize: MainAxisSize.max,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            "- Pin your favorite apps here",
+                            style: GoogleFonts.lato(
+                                color: Colors.white, fontSize: 12),
+                          ),
+                          SizedBox(
+                            height: 20,
+                          ),
+                          Text(
+                            "- Long press on any app for more options",
+                            style: GoogleFonts.lato(
+                                color: Colors.white, fontSize: 12),
+                          ),
+                          SizedBox(
+                            height: 20,
+                          ),
+                          RaisedButton(
+                            onPressed: () {
+                              Navigator.pushNamed(context, '/second'
+
+                                  // PageTransition(
+                                  //   type: PageTransitionType.rightToLeft,
+                                  //   child: SecondScreen(
+                                  //     providerInSecondScreen:
+                                  //         _installedAppsProvider,
+                                  //     favoriteAppsProvider:
+                                  //         Provider.of<FavoriteAppsProvider>(
+                                  //             context,
+                                  //             listen: false),
+                                  //     themeProvider: Provider.of<ThemeProvider>(
+                                  //         context,
+                                  //         listen: false),
+                                  //   ),
+                                  // ),
+                                  );
+                            },
+                            child: Text(
+                              "Go to apps",
+                              style: GoogleFonts.lato(color: Colors.white),
+                            ),
+                            color: Colors.red[400],
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
-              ),
-              buildBottomBar(),
-            ],
-          )),
+                buildBottomBar(),
+              ],
+            ),
+          ),
         ),
       ),
     );
   }
+
+  // static Random() {}
 }

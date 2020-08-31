@@ -1,14 +1,18 @@
 import 'package:device_apps/device_apps.dart';
 import 'package:fading_edge_scrollview/fading_edge_scrollview.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:line_awesome_flutter/line_awesome_flutter.dart';
+import 'package:minimal_launcher/Models/favorite_apps_provider.dart';
 import 'package:minimal_launcher/Models/installed_app_model.dart';
 import 'package:minimal_launcher/provider/list_of_apps_provider.dart';
-import 'package:minimal_launcher/settings.dart';
 import 'package:minimal_launcher/widgets.dart';
 import 'package:provider/provider.dart';
 import 'package:page_transition/page_transition.dart';
+import 'package:intent/intent.dart' as android_intent;
+import 'package:intent/extra.dart' as android_extra;
+import 'package:intent/action.dart' as android_action;
 
 class SecondScreen extends StatefulWidget {
   @override
@@ -16,28 +20,32 @@ class SecondScreen extends StatefulWidget {
 }
 
 class _SecondScreenState extends State<SecondScreen> {
-  TextEditingController textEditingController = TextEditingController();
-  InstalledAppsProvider provider;
-  ScrollController scrollController = ScrollController();
+  TextEditingController _textEditingController;
+
+  ScrollController _scrollController;
+  // final _scaffoldKey = GlobalKey<ScaffoldState>();
 
   searchForApps(String text, List<InstalledAppModel> localApps) async {
     List<InstalledAppModel> searchResult = localApps
         .where((InstalledAppModel item) =>
             item.appName.toLowerCase().contains(text.toLowerCase()))
         .toList();
-
     return searchResult;
   }
 
   @override
   void initState() {
     super.initState();
-    initialiseProvider();
+    _scrollController = ScrollController();
+    _textEditingController = TextEditingController();
+    // Provider.of<InstalledAppsProvider>(context, listen: false)
+    //     .checkForUpdateAndUpdate();
   }
 
-  initialiseProvider() async {
-    provider = InstalledAppsProvider();
-    provider.update();
+  @override
+  void dispose() {
+    super.dispose();
+    _textEditingController.dispose();
   }
 
   mySearchBar() {
@@ -56,65 +64,83 @@ class _SecondScreenState extends State<SecondScreen> {
           SizedBox(
             width: 10,
           ),
-          Expanded(child:
-              Consumer<InstalledAppsProvider>(builder: (bc, data, chidl) {
-            List<InstalledAppModel> installedAppsInTextField =
-                data.getProviderInstalledApps;
-            return TextField(
+          Expanded(
+            child: TextField(
               onChanged: (value) async {
-                // print(value);
+                InstalledAppsProvider provider =
+                    Provider.of<InstalledAppsProvider>(context, listen: false);
                 if (value != "") {
-                  List<InstalledAppModel> searches =
-                      await searchForApps(value, installedAppsInTextField);
-                  data.setSearchedApps(searches);
+                  List<InstalledAppModel> appsToShow = await searchForApps(
+                      value, provider.getProviderInstalledApps);
+                  provider.setSearchedApps(appsToShow);
                 } else {
-                  data.setSearchedApps(installedAppsInTextField);
+                  provider.setSearchedApps(provider.getProviderInstalledApps);
                 }
               },
-              controller: textEditingController,
+              controller: _textEditingController,
               style: GoogleFonts.lato(color: Colors.white),
               decoration: InputDecoration(
                 border: InputBorder.none,
-                hintText: data.getIsEmpty
-                    ? "Loading Apps..."
-                    : "Search for your apps",
+                hintText: "Search for your apps",
                 hintStyle: GoogleFonts.lato(color: Colors.grey),
               ),
-            );
-          }))
+            ),
+          )
         ],
       ),
     );
   }
 
-  // Widget secondaryTile(InstalledAppModel app) {
-  //   return ListTile(
-  //     onTap: () async {
-  //       await DeviceApps.openApp(app.packageName);
-  //       // Future.delayed(Duration(milliseconds: 1000), () {
-  //       //   if (textEditingController.value != null) {
-  //       //     textEditingController.clear();
-  //       //     data.setSearchedApps(data.getProviderInstalledApps);
-  //       //   }
-  //       // });
-  //       Future.delayed(Duration(milliseconds: 1000), () {
-  //         Navigator.pop(context);
-  //       });
-  //     },
-  //     leading: fragmentMemoryImageWidget(app.appIcon,),
-  //     title: Text(
-  //       "${app.appName}",
-  //       style: GoogleFonts.lato(color: Colors.white, fontSize: 20),
-  //     ),
-  //   );
-  // }
+  ListTile listTileInsideDialog(String title, IconData icon, int returnValue) {
+    return ListTile(
+      title: Row(
+        children: [
+          Icon(
+            icon,
+            color: returnValue == 1 ? Colors.red : Colors.grey[400],
+          ),
+          SizedBox(
+            width: 10,
+          ),
+          Text(
+            title,
+            style: TextStyle(
+                color: returnValue == 1 ? Colors.red : Colors.grey[400]),
+          ),
+        ],
+      ),
+      onTap: () {
+        Navigator.pop(context, returnValue);
+      },
+    );
+  }
+
+  simpleDialog() {
+    return SimpleDialog(
+      backgroundColor: Colors.grey[850],
+      contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+      children: [
+        listTileInsideDialog("Uninstall app", LineAwesomeIcons.trash, 1),
+        // listTileInsideDialog("App Info", LineAwesomeIcons.cog, 2),
+        listTileInsideDialog("Pin to home", LineAwesomeIcons.thumbtack, 2),
+      ],
+    );
+  }
+
+  uninstallAppFunc(String packageName) {
+    android_intent.Intent()
+      ..setAction(android_action.Action.ACTION_DELETE)
+      ..setData(Uri.parse("package:$packageName"))
+      ..startActivity().catchError((e) => print(e));
+  }
 
   buildListOfApps() {
     return Consumer<InstalledAppsProvider>(
       builder: (bc, data, child) {
-        // print('consumer ran');
+        print('consumer ran');
+        // data.checkForUpdateAndUpdate();
         List<InstalledAppModel> appsInListView =
-            (data.getAppsToShow == null) || textEditingController.text == ""
+            (data.getAppsToShow == null) || _textEditingController.text == ""
                 ? data.getProviderInstalledApps
                 : data.getAppsToShow;
         return GestureDetector(
@@ -124,43 +150,86 @@ class _SecondScreenState extends State<SecondScreen> {
             }
           },
           onPanDown: (dragDetail) {
-            FocusScopeNode currentFocus = FocusScope.of(bc);
+            FocusScopeNode currentFocus = FocusScope.of(context);
             if (!currentFocus.hasPrimaryFocus) {
               currentFocus.unfocus();
             }
           },
-          child: FadingEdgeScrollView.fromScrollView(
-            shouldDisposeScrollController: true,
-            child: ListView.builder(
-                controller: scrollController,
-                physics: BouncingScrollPhysics(),
-                itemCount: appsInListView?.length ?? 0,
-                itemBuilder: (BuildContext bc, int index) {
-                  // Application app = localApps[index];
-                  // index != 0 ?
-                  //   need = (localApps[index].appName[0].toLowerCase() !=
-                  //       localApps[index - 1].appName[0].toLowerCase())
-                  // : null;
-                  return ListTile(
-                    onTap: () async {
-                      await DeviceApps.openApp(
-                          appsInListView[index].packageName);
-                      Future.delayed(Duration(milliseconds: 1000), () {
-                        if (textEditingController.value != null) {
-                          textEditingController.clear();
-                          data.setSearchedApps(data.getProviderInstalledApps);
-                        }
-                      });
-                    },
-                    leading: fragmentMemoryImageWidget(
-                        appsInListView[index].appIcon, 40),
-                    title: Text(
-                      "${appsInListView[index].appName}",
-                      style:
-                          GoogleFonts.lato(color: Colors.white, fontSize: 20),
-                    ),
-                  );
-                }),
+          child: AnimationLimiter(
+            child: FadingEdgeScrollView.fromScrollView(
+              shouldDisposeScrollController: true,
+              child: ListView.builder(
+                  controller: _scrollController,
+                  // physics: BouncingScrollPhysics(),
+                  itemCount: appsInListView?.length ?? 0,
+                  itemBuilder: (BuildContext bc, int index) {
+                    InstalledAppModel app = appsInListView[index];
+                    // Application app = localApps[index];
+                    // index != 0 ?
+                    //   need = (localApps[index].appName[0].toLowerCase() !=
+                    //       localApps[index - 1].appName[0].toLowerCase())
+                    // : null;
+                    return AnimationConfiguration.staggeredList(
+                      position: index,
+                      duration: const Duration(milliseconds: 300),
+                      child: SlideAnimation(
+                        horizontalOffset: 100.0,
+                        child: FadeInAnimation(
+                          child: ListTile(
+                            onLongPress: () {
+                              showDialog(
+                                  context: context,
+                                  builder: (context) {
+                                    return simpleDialog();
+                                  }).then((returnValue) async {
+                                if (returnValue != null) {
+                                  print(returnValue);
+                                  if (returnValue == 1) {
+                                    print("deleting started");
+                                    await uninstallAppFunc(app.packageName);
+                                    Future.delayed(
+                                        const Duration(milliseconds: 3000), () {
+                                      data.checkForUpdateAndUpdate();
+                                    });
+                                    print("deleting done");
+                                  }
+                                  if (returnValue == 2)
+                                    Provider.of<FavoriteAppsProvider>(context,
+                                            listen: false)
+                                        .setFavoriteApp(app);
+                                }
+                              });
+
+                              // _scaffoldKey.currentState.showSnackBar(SnackBar(
+                              //   // backgroundColor: Colors.green[
+                              //   elevation: 50,
+
+                              //   content: Text(
+                              //       "Pinned to start!"), //,style: GoogleFonts.lato(color: Colors.grey[400]),),
+                              // ));
+                            },
+                            onTap: () async {
+                              await DeviceApps.openApp(app.packageName);
+                              Future.delayed(Duration(milliseconds: 3000), () {
+                                if (_textEditingController.value != null) {
+                                  _textEditingController.clear();
+                                  data.setSearchedApps(
+                                      data.getProviderInstalledApps);
+                                }
+                              });
+                            },
+                            leading: fragmentMemoryImageWidget(app.appIcon, 40),
+                            title: Text(
+                              "${app.appName}",
+                              style: GoogleFonts.lato(
+                                  color: Colors.grey[300], fontSize: 20),
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  }),
+            ),
           ),
         );
       },
@@ -170,12 +239,14 @@ class _SecondScreenState extends State<SecondScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // print('build method');
     return Scaffold(
+      // key: _scaffoldKey,
       resizeToAvoidBottomInset: true,
       backgroundColor: Colors.black,
       body: SafeArea(
-        child: ChangeNotifierProvider<InstalledAppsProvider>(
-          create: (context) => provider,
+        child: ChangeNotifierProvider.value(
+          value: Provider.of<InstalledAppsProvider>(context),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -186,7 +257,7 @@ class _SecondScreenState extends State<SecondScreen> {
                   child: Text(
                     "apps",
                     style: GoogleFonts.lato(
-                        color: Colors.white,
+                        color: Colors.grey,
                         fontSize: 60,
                         fontWeight: FontWeight.w300),
                   ),
@@ -199,7 +270,6 @@ class _SecondScreenState extends State<SecondScreen> {
                 child: SizedBox(
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
-                    // crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       SizedBox(
                         width: 40,
@@ -209,13 +279,7 @@ class _SecondScreenState extends State<SecondScreen> {
                             IconButton(
                                 iconSize: 28,
                                 onPressed: () {
-                                  Navigator.push(
-                                    context,
-                                    PageTransition(
-                                      type: PageTransitionType.rightToLeft,
-                                      child: Settings(),
-                                    ),
-                                  );
+                                  Navigator.pushNamed(context, '/third');
                                 },
                                 icon: Icon(
                                   LineAwesomeIcons.cog,
@@ -238,7 +302,6 @@ class _SecondScreenState extends State<SecondScreen> {
                 ),
               ),
               mySearchBar(),
-              // mySearchBar(),
               SizedBox(
                 height: 10,
               )
@@ -249,79 +312,3 @@ class _SecondScreenState extends State<SecondScreen> {
     );
   }
 }
-
-// buildSearchBar(BuildContext context) {
-//   SearchBarController _searchBarController = SearchBarController();
-//   InstalledAppsProvider provider = Provider.of<InstalledAppsProvider>(context);
-
-//   searchForApps(String text, List<AppModel> localApps) async {
-//     List<AppModel> searchResult = localApps
-//         .where((AppModel item) =>
-//             item.appName.toLowerCase().contains(text.toLowerCase()))
-//         .toList();
-//     for (AppModel app in searchResult) {
-//       print(app.appName);
-//     }
-//     provider.setSearchedApps(searchResult);
-//     return searchResult;
-//   }
-
-//   return Consumer<InstalledAppsProvider>(
-//     builder: (bc, data, child) {
-//       bool isEmpty = data.getIsEmpty;
-//       List<AppModel> installedApps = data.getProviderInstalledApps;
-//       return SearchBar<AppModel>(
-//         debounceDuration: Duration(milliseconds: 500),
-//         textStyle: GoogleFonts.lato(color: Colors.white),
-//         searchBarPadding: EdgeInsets.symmetric(horizontal: 10),
-//         listPadding: EdgeInsets.symmetric(horizontal: 15),
-//         onSearch: (value) {
-//           searchForApps(value, installedApps);
-//         },
-//         searchBarStyle: SearchBarStyle(
-//             backgroundColor: Colors.grey[850],
-//             padding: EdgeInsets.symmetric(horizontal: 10)),
-//         hintText: isEmpty ? "Loading apps..." : "Search your apps",
-//         icon: isEmpty
-//             ? showCircularProgressIndicator()
-//             : Icon(
-//                 Icons.search,
-//                 color: Colors.white,
-//               ),
-//         searchBarController: _searchBarController,
-//         cancellationWidget: Text(
-//           "Cancel",
-//           style: GoogleFonts.lato(
-//             color: Colors.white,
-//           ),
-//         ),
-//         loader: Text(
-//           "Searching...",
-//           style: GoogleFonts.lato(color: Colors.white),
-//         ),
-//         emptyWidget: Text(
-//           "empty",
-//           style: GoogleFonts.lato(color: Colors.white),
-//         ),
-//         onCancelled: () {
-//           FocusScopeNode currentFocus = FocusScope.of(bc);
-//           if (!currentFocus.hasPrimaryFocus) {
-//             currentFocus.unfocus();
-//           }
-//         },
-//         onItemFound: (AppModel app, int index) {
-//           print(index);
-//           return ListTile(
-//             title: Text(
-//               app.appName,
-//               style: GoogleFonts.lato(color: Colors.white),
-//             ),
-//             onTap: () {
-//               DeviceApps.openApp(app.packageName);
-//             },
-//           );
-//         },
-//       );
-//     },
-//   );
-// }

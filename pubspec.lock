@@ -312,6 +312,13 @@ packages:
       url: "https://pub.dartlang.org"
     source: hosted
     version: "3.1.4"
+  intent:
+    dependency: "direct main"
+    description:
+      name: intent
+      url: "https://pub.dartlang.org"
+    source: hosted
+    version: "1.4.0"
   intl:
     dependency: transitive
     description:
@@ -473,13 +480,6 @@ packages:
       url: "https://pub.dartlang.org"
     source: hosted
     version: "1.4.0"
-  preload_page_view:
-    dependency: "direct main"
-    description:
-      name: preload_page_view
-      url: "https://pub.dartlang.org"
-    source: hosted
-    version: "0.1.4"
   process:
     dependency: transitive
     description:
@@ -611,13 +611,6 @@ packages:
       url: "https://pub.dartlang.org"
     source: hosted
     version: "1.2.0"
-  uninstall_apps:
-    dependency: "direct main"
-    description:
-      name: uninstall_apps
-      url: "https://pub.dartlang.org"
-    source: hosted
-    version: "0.0.4"
   vector_math:
     dependency: transitive
     description:
